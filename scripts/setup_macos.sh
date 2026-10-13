@@ -983,12 +983,20 @@ wait_for_control_token() {
   refuse control-token "no control token appeared after $TOKEN_ATTEMPTS checks; see $LOG_DIR/alan.error.log"
 }
 
+seed_deploy_marker() {
+  local dir="$ALAN_HOME_DIR/deploy"
+  mkdir -p "$dir"
+  printf '%s\n' "$1" > "$dir/restarted_sha.tmp"
+  mv -f "$dir/restarted_sha.tmp" "$dir/restarted_sha"
+}
+
 wait_for_head() {
   local want="$1" attempt=0 summary=""
   while [ "$attempt" -lt "$HEALTH_ATTEMPTS" ]; do
     summary="$(health_summary)"
     if [ "$summary" = "True $want" ]; then
       note ok "health ok, serving commit $want"
+      seed_deploy_marker "$want"
       return 0
     fi
     attempt=$((attempt + 1))

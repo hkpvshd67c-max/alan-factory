@@ -10,6 +10,7 @@ from alan.self_update import _idle, _journal, _leftover, _run, _soak
 from tests.self_update_apply_fakes import HEALTH_URL, ApplyScenario, build_apply_scenario
 from tests.self_update_fixtures import link_executable, push_run
 
+_NOW = 1_800_000_000.0
 _BOUND_SCRIPT_PYTHON = '#!/bin/bash\nprintf \'%s\' "$(cat "$0.stdout")"\nexit "$(cat "$0.code")"\n'
 
 
@@ -56,7 +57,7 @@ def test_wait_bound_s_is_none_when_the_parsed_bound_is_not_finite(tmp_path: Path
 
 
 def test_queue_is_idle_when_no_db_file_exists(tmp_path: Path) -> None:
-    assert _idle.queue_is_idle(tmp_path / "queue.db") is True
+    assert _idle.queue_is_idle(tmp_path / "queue.db", _NOW) is True
 
 
 def test_queue_is_idle_when_no_job_is_pending_or_running(tmp_path: Path) -> None:
@@ -67,7 +68,7 @@ def test_queue_is_idle_when_no_job_is_pending_or_running(tmp_path: Path) -> None
     assert job is not None
     q.complete(job.id)
     q.close()
-    assert _idle.queue_is_idle(db_path) is True
+    assert _idle.queue_is_idle(db_path, _NOW) is True
 
 
 def test_queue_is_not_idle_when_a_job_is_pending(tmp_path: Path) -> None:
@@ -75,7 +76,7 @@ def test_queue_is_not_idle_when_a_job_is_pending(tmp_path: Path) -> None:
     q = queue.Queue(db_path=db_path)
     q.enqueue("task-1", "team")
     q.close()
-    assert _idle.queue_is_idle(db_path) is False
+    assert _idle.queue_is_idle(db_path, _NOW) is False
 
 
 def test_queue_is_not_idle_when_a_job_is_running(tmp_path: Path) -> None:
@@ -84,13 +85,29 @@ def test_queue_is_not_idle_when_a_job_is_running(tmp_path: Path) -> None:
     q.enqueue("task-1", "team")
     q.claim()
     q.close()
-    assert _idle.queue_is_idle(db_path) is False
+    assert _idle.queue_is_idle(db_path, _NOW) is False
+
+
+def test_queue_is_idle_when_the_only_pending_job_is_parked_until_later(tmp_path: Path) -> None:
+    db_path = tmp_path / "queue.db"
+    q = queue.Queue(db_path=db_path)
+    q.enqueue("task-1", "deploy_verify", eligible_at=_NOW + 60)
+    q.close()
+    assert _idle.queue_is_idle(db_path, _NOW) is True
+
+
+def test_queue_is_not_idle_when_a_parked_job_has_come_due(tmp_path: Path) -> None:
+    db_path = tmp_path / "queue.db"
+    q = queue.Queue(db_path=db_path)
+    q.enqueue("task-1", "deploy_verify", eligible_at=_NOW)
+    q.close()
+    assert _idle.queue_is_idle(db_path, _NOW) is False
 
 
 def test_queue_is_idle_treats_a_malformed_database_as_busy(tmp_path: Path) -> None:
     db_path = tmp_path / "queue.db"
     db_path.write_bytes(b"not a sqlite database")
-    assert _idle.queue_is_idle(db_path) is False
+    assert _idle.queue_is_idle(db_path, _NOW) is False
 
 
 def test_queue_is_idle_handles_a_db_path_containing_a_hash_and_question_mark(
@@ -102,7 +119,7 @@ def test_queue_is_idle_handles_a_db_path_containing_a_hash_and_question_mark(
     q = queue.Queue(db_path=db_path)
     q.enqueue("task-1", "team")
     q.close()
-    assert _idle.queue_is_idle(db_path) is False
+    assert _idle.queue_is_idle(db_path, _NOW) is False
 
 
 def test_idle_probe_wraps_queue_is_idle(tmp_path: Path) -> None:

@@ -335,6 +335,20 @@ def test_success_requires_health_ok_at_the_clones_head_and_records_the_start_mar
     assert _marks(sandbox) == ["build", "profile", "start"]
 
 
+def test_success_seeds_the_deploy_marker_with_the_served_head(tmp_path: Path) -> None:
+    sandbox = _ready(tmp_path)
+    _start(sandbox)
+    marker = sandbox.alan_dir / "deploy" / "restarted_sha"
+    assert marker.read_text(encoding="utf-8") == f"{sandbox.head()}\n"
+
+
+def test_a_service_serving_another_commit_seeds_no_deploy_marker(tmp_path: Path) -> None:
+    sandbox = _ready(tmp_path)
+    run = _start(sandbox, Scenario(served_sha_after_bootstrap=WRONG_SHA))
+    assert run.returncode == 1
+    assert not (sandbox.alan_dir / "deploy" / "restarted_sha").exists()
+
+
 def test_a_load_failure_exits_non_zero_and_records_no_start_mark(tmp_path: Path) -> None:
     sandbox = _ready(tmp_path)
     run = _start(sandbox, Scenario(bootstrap_fails=True))

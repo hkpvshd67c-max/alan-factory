@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import sqlite3
 import subprocess
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -10,7 +11,6 @@ from alan import process_runner
 
 _BOUND_TIMEOUT_S = 30.0
 _QUEUE_TIMEOUT_S = 5.0
-_ACTIVE_STATUSES = ("pending", "running")
 
 
 def wait_bound_s(repo: Path) -> float | None:
@@ -33,19 +33,20 @@ def wait_bound_s(repo: Path) -> float | None:
     return bound
 
 
-def queue_is_idle(db_path: Path) -> bool:
+_BUSY_JOB_QUERY = (
+    "SELECT 1 FROM jobs WHERE status = 'running' OR (status = 'pending' "
+    "AND (eligible_at IS NULL OR eligible_at <= ?)) LIMIT 1"
+)
+
+
+def queue_is_idle(db_path: Path, now: float) -> bool:
     if not db_path.is_file():
         return True
     try:
         uri = f"{db_path.resolve().as_uri()}?mode=ro"
         conn = sqlite3.connect(uri, uri=True, timeout=_QUEUE_TIMEOUT_S)
         try:
-            placeholders = ",".join("?" * len(_ACTIVE_STATUSES))
-            row = conn.execute(
-                "SELECT 1 FROM jobs WHERE status IN "  # noqa: S608  # nosec B608
-                f"({placeholders}) LIMIT 1",
-                _ACTIVE_STATUSES,
-            ).fetchone()
+            row = conn.execute(_BUSY_JOB_QUERY, (now,)).fetchone()
         finally:
             conn.close()
     except (sqlite3.Error, OSError):
@@ -54,4 +55,4 @@ def queue_is_idle(db_path: Path) -> bool:
 
 
 def idle_probe(db_path: Path) -> Callable[[], bool]:
-    return lambda: queue_is_idle(db_path)
+    return lambda: queue_is_idle(db_path, time.time())
