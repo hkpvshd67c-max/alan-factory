@@ -20,7 +20,8 @@ import alan.build_chat as build_chat_mod
 import alan.explore_chat as explore_chat_mod
 import alan.queue as queue_mod
 import alan.workspace as workspace_mod
-from alan import control_token_store, roots
+from alan import control_token_store, prep_chat_link, roots
+from alan._chat_core import PrepChatRead
 from alan.control_plane import CONTROL_TOKEN_HEADER, expected_control_token
 from alan.dispatcher import Dispatcher
 from alan.errors import AppError
@@ -180,6 +181,21 @@ def explore_chat_locks_dep(request: Request) -> explore_chat_mod.ExploreChatSess
     return cast(explore_chat_mod.ExploreChatSessionLocks, request.app.state.explore_chat_locks)
 
 
+def prep_chat_link_env_dep(
+    request: Request,
+    build_root: Annotated[Path, Depends(build_chat_sessions_root_dep)],
+    explore_root: Annotated[Path, Depends(explore_chat_sessions_root_dep)],
+    workspaces_root: Annotated[Path, Depends(workspaces_root_dep)],
+    queue: Annotated[Queue, Depends(queue_dep)],
+) -> prep_chat_link.LinkEnv:
+    return prep_chat_link.LinkEnv(
+        build_root=build_root,
+        explore_root=explore_root,
+        workspaces_root=workspaces_root,
+        index=lambda: workspace_index_dep(request, workspaces_root, queue),
+    )
+
+
 QueueDep = Annotated[Queue, Depends(queue_dep)]
 PubSubDep = Annotated[PubSub, Depends(pubsub_dep)]
 WorkspaceIndexDep = Annotated[WorkspaceIndex, Depends(workspace_index_dep)]
@@ -189,9 +205,14 @@ WorkspacesRootDep = Annotated[Path, Depends(workspaces_root_dep)]
 BuildChatSessionsRootDep = Annotated[Path, Depends(build_chat_sessions_root_dep)]
 BuildChatLocksDep = Annotated[build_chat_mod.BuildChatSessionLocks, Depends(build_chat_locks_dep)]
 ExploreChatSessionsRootDep = Annotated[Path, Depends(explore_chat_sessions_root_dep)]
+PrepChatLinkEnvDep = Annotated[prep_chat_link.LinkEnv, Depends(prep_chat_link_env_dep)]
 ExploreChatLocksDep = Annotated[
     explore_chat_mod.ExploreChatSessionLocks, Depends(explore_chat_locks_dep)
 ]
+
+
+def _empty_prep_chat_reads() -> list[PrepChatRead]:
+    return []
 
 
 class ChatMessageOut(BaseModel):
@@ -200,6 +221,7 @@ class ChatMessageOut(BaseModel):
     ts: datetime
     interrupted: bool = False
     operations: list[str] = Field(default_factory=list)
+    prep_chat_reads: list[PrepChatRead] = Field(default_factory=_empty_prep_chat_reads)
 
 
 class CreateSessionResponse(BaseModel):

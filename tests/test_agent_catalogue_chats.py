@@ -115,7 +115,12 @@ def test_the_build_chat_prompt_labels_the_repository_and_the_optional_shop_stats
 def test_the_build_chat_prompt_labels_the_shared_blocks() -> None:
     entry = _entry(agent_key.BUILD_CHAT)
     shared = {s.label for s in entry.prompt if s.shared}
-    assert shared == {"untrusted_content_notice", "chat_ux_lens", "chat_issue_scope"}
+    assert shared == {
+        "untrusted_content_notice",
+        "chat_ux_lens",
+        "chat_issue_scope",
+        "chat_prep_chat_attachment",
+    }
 
 
 @pytest.mark.parametrize("consultant", CONSULTANTS, ids=lambda c: c.key)
@@ -125,7 +130,7 @@ def test_an_explore_chat_prompt_carries_the_ux_lens_only_for_the_consultants_tha
     entry = _entry(agent_key.explore_chat(consultant.key))
     shared = {s.label for s in entry.prompt if s.shared}
     assert ("chat_ux_lens" in shared) is consultant.carries_ux_lens
-    assert {"untrusted_content_notice", "chat_issue_scope"} <= shared
+    assert {"untrusted_content_notice", "chat_issue_scope", "chat_prep_chat_attachment"} <= shared
     assert _labels(entry, "placeholder") <= {"CHAT_REPO_LABEL"}
     assert entry.tags == ["consultant"]
     assert entry.name == f"Explore chat / {consultant.label}"

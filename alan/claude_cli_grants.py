@@ -5,7 +5,7 @@ import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
-from alan import default_profile, roots
+from alan import roots
 from alan.control_token_store import CONTROL_TOKEN_FILENAME, CONTROL_TOKEN_META_FILENAME
 
 WRITE_TOOLS: tuple[str, ...] = ("Write", "Edit", "NotebookEdit")
@@ -57,27 +57,25 @@ CHAT_ISSUE_SCOPE_CLAUSE = (
     "out of scope: decline it rather than fetching it.\n"
 )
 
-PREP_CHAT_SCOPE_CLAUSE = (
-    "You can read a preparation conversation — an earlier build-chat or "
-    "explore-chat session, whether still in progress or already archived "
-    "onto the workspace it produced — via WebFetch whenever the user "
-    "pastes a link to it, rather than declining as if you could not. Take "
-    "the session id out of the pasted link yourself and fetch "
-    "{prep_chat_origin}/api/build-chat/sessions/<id> (or "
-    "/api/explore-chat/sessions/<id> for an explore session) — always "
-    "against that host, never a loopback host the pasted link may show, "
-    "which WebFetch cannot reach once it upgrades the request to https. "
-    "An already-archived session's link now redirects to its transcript; "
-    "WebFetch follows that redirect for you, so the same fetch reads it "
-    "whether the conversation is still live or already archived. This "
-    "session is itself bound to {repo_label}, and the fetched response "
-    "names the repository the read conversation is bound to in its "
-    "`engine_key` field (`null` there means alan's own repository). Read "
-    "and act on the fetched conversation only when its repository is the "
-    "one this session is bound to; a preparation conversation bound to a "
-    "different repository is out of scope — decline it and tell the user "
-    "why, rather than reading it, exactly like a GitHub issue from a "
-    "different repository.\n"
+PREP_CHAT_ATTACHMENT_CLAUSE = (
+    "When the user pastes a link to a preparation conversation — an earlier "
+    "build-chat or explore-chat session, whether still in progress or already "
+    "archived onto the workspace it produced — alan reads it for you and "
+    "appends the result to that same message as a <preparation_chat> block, "
+    "so the conversation is already in front of you in the turn it was "
+    "pasted. status=\"read\" holds the conversation's saved brief, when one "
+    "exists, and its transcript: answer from it directly and treat it as the "
+    "actual conversation. A line reading \"truncated: K of N earlier "
+    "messages omitted\" means only the newest messages are shown; tell the "
+    "user that. status=\"other_repository\" means alan withheld the "
+    "conversation because it belongs to a different repository than this "
+    "session; tell the user it was not read for that reason, exactly like a "
+    "GitHub issue from a different repository. status=\"not_found\" means the "
+    "link did not resolve to a conversation; tell the user so plainly in one "
+    "line. A pasted preparation-chat link with no block after it was left "
+    "unattached on purpose. Never fetch such a link with WebFetch, never "
+    "call localhost or any loopback address, and never read alan's state "
+    "directory or any file on disk to find the conversation.\n"
 )
 
 OWN_REPO_LABEL = "alan (this repository)"
@@ -117,22 +115,9 @@ _EXPLORE_NO_IMPL_HEAD = (
 )
 
 
-def configured_prep_chat_origin() -> str | None:
-    return default_profile.resolved().profile.prep_chat_origin
+BUILD_NO_IMPL = _BUILD_NO_IMPL_HEAD + PREP_CHAT_ATTACHMENT_CLAUSE
 
-
-def prep_chat_scope_clause(repo_label: str, prep_chat_origin: str | None) -> str:
-    if prep_chat_origin is None:
-        return ""
-    return PREP_CHAT_SCOPE_CLAUSE.format(prep_chat_origin=prep_chat_origin, repo_label=repo_label)
-
-
-def build_no_impl(repo_label: str, prep_chat_origin: str | None) -> str:
-    return _BUILD_NO_IMPL_HEAD + prep_chat_scope_clause(repo_label, prep_chat_origin)
-
-
-def explore_no_impl(repo_label: str, prep_chat_origin: str | None) -> str:
-    return _EXPLORE_NO_IMPL_HEAD + prep_chat_scope_clause(repo_label, prep_chat_origin)
+EXPLORE_NO_IMPL = _EXPLORE_NO_IMPL_HEAD + PREP_CHAT_ATTACHMENT_CLAUSE
 
 
 NO_TOOLS_BLOCK = (

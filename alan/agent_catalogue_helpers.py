@@ -29,7 +29,11 @@ from alan.claude_cli import (
     _CHAT_UX_LENS,  # pyright: ignore[reportPrivateUsage]
     UNTRUSTED_CONTENT_NOTICE,
 )
-from alan.claude_cli_grants import CHAT_ISSUE_SCOPE_CLAUSE, NO_TOOLS_BLOCK
+from alan.claude_cli_grants import (
+    CHAT_ISSUE_SCOPE_CLAUSE,
+    NO_TOOLS_BLOCK,
+    PREP_CHAT_ATTACHMENT_CLAUSE,
+)
 from alan.engine_config import EngineConfig
 from alan.headless_prompt import HEADLESS_EXECUTION_BLOCK
 from alan.launch_spec import LaunchSpec, PromptSegment, flat_denied_tools
@@ -100,6 +104,7 @@ def shared_blocks(extra: Sequence[tuple[str, str]] = ()) -> list[tuple[str, str]
         ("merge_gate_clause", prompt_templates.MERGE_GATE_CLAUSE),
         ("chat_ux_lens", _CHAT_UX_LENS),
         ("chat_issue_scope", CHAT_ISSUE_SCOPE_CLAUSE),
+        ("chat_prep_chat_attachment", PREP_CHAT_ATTACHMENT_CLAUSE),
     ]
     return sorted(blocks, key=lambda item: -len(item[1]))
 

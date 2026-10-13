@@ -10,7 +10,7 @@ from starlette.testclient import WebSocketDenialResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from alan import server
-from tests.test_claude_cli_grants import with_prep_chat_origin
+from tests.prep_chat_link_support import with_prep_chat_origin
 
 _FIXED_BODY = {"detail": "host not allowed"}
 _NEUTRAL_ORIGIN = "https://prep.example.test:8443"

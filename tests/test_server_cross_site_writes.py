@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from alan import server
-from tests.test_claude_cli_grants import with_prep_chat_origin
+from tests.prep_chat_link_support import with_prep_chat_origin
 
 _LOOPBACK_BASE_URL = "http://127.0.0.1:8585"
 _FIXED_ORIGIN_BODY = {"detail": "origin not allowed"}

@@ -36,6 +36,7 @@ from alan.routes._deps import (
     BuildChatSessionsRootDep,
     ChatMessageOut,
     CreateSessionResponse,
+    PrepChatLinkEnvDep,
     PubSubDep,
     QueueDep,
     WorkspaceIndexDep,
@@ -299,10 +300,17 @@ async def send_build_chat_message(
     pubsub: PubSubDep,
     locks: BuildChatLocksDep,
     queue: QueueDep,
+    link_env: PrepChatLinkEnvDep,
 ) -> _chat_router.ChatAck:
     shop_stats = await run_in_threadpool(shop_stats_mod.assemble_shop_stats_block, queue)
     return await _chat_router.start_message_turn(
-        _ctx_with_shop_stats(shop_stats), session_id, body.content, root, pubsub, locks
+        _ctx_with_shop_stats(shop_stats),
+        session_id,
+        body.content,
+        root,
+        pubsub,
+        locks,
+        _chat_router.link_preparer(link_env),
     )
 
 

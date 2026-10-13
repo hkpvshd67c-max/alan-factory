@@ -22,7 +22,7 @@ from starlette.responses import Response
 import alan.dispatch_proposal as dispatch_proposal_mod
 import alan.engine_config as engine_config_mod
 import alan.project as project_mod
-from alan import _chat_core
+from alan import _chat_core, prep_chat_link
 from alan import collision as collision_mod
 from alan.agent_key import BUILD_CHAT, AgentKey
 from alan.block_correction import BlockCorrectionError
@@ -82,8 +82,47 @@ class PutBriefBody(BaseModel):
     content: str = Field(max_length=20000)
 
 
+def _empty_prep_chat_reads() -> list[_chat_core.PrepChatRead]:
+    return []
+
+
 class ChatAck(BaseModel):
     status: Literal["accepted"]
+    prep_chat_reads: list[_chat_core.PrepChatRead] = Field(default_factory=_empty_prep_chat_reads)
+
+
+@dataclass(frozen=True)
+class PreparedTurn:
+    user_text: str
+    prep_chat_reads: list[_chat_core.PrepChatRead]
+
+
+PrepareTurn = Callable[[_chat_core.ChatSession, str], Awaitable[PreparedTurn]]
+
+
+def link_preparer(env: prep_chat_link.LinkEnv) -> PrepareTurn:
+    async def prepare(session: _chat_core.ChatSession, content: str) -> PreparedTurn:
+        attachment = await run_in_threadpool(
+            prep_chat_link.attach,
+            content,
+            env,
+            engine_key=session.engine_key,
+            session_id=session.session_id,
+        )
+        return PreparedTurn(
+            user_text=prep_chat_link.append_blocks(content, attachment),
+            prep_chat_reads=attachment.reads,
+        )
+
+    return prepare
+
+
+async def _prepared_turn(
+    prepare: PrepareTurn | None, session: _chat_core.ChatSession, content: str
+) -> PreparedTurn:
+    if prepare is None:
+        return PreparedTurn(user_text=content, prep_chat_reads=[])
+    return await prepare(session, content)
 
 
 def _default_agent(_session: object) -> AgentKey:
@@ -455,12 +494,19 @@ async def start_message_turn(
     root: Path,
     pubsub: PubSub,
     locks: _chat_core.ChatSessionLocks,
+    prepare: PrepareTurn | None = None,
 ) -> ChatAck:
     session = await run_in_threadpool(load_or_404, ctx, session_id, root)
     entry = _acquire_or_409(session, locks)
     sid = session.session_id
     try:
-        user_msg = _chat_core.ChatMessage(role="user", content=content, ts=datetime.now(UTC))
+        prepared = await _prepared_turn(prepare, session, content)
+        user_msg = _chat_core.ChatMessage(
+            role="user",
+            content=content,
+            ts=datetime.now(UTC),
+            prep_chat_reads=prepared.prep_chat_reads,
+        )
         session = await run_in_threadpool(
             _chat_core.append_user_message_and_mark_started, ctx.core, session, user_msg, root=root
         )
@@ -469,7 +515,7 @@ async def start_message_turn(
             kwargs={
                 "ctx": ctx,
                 "session": session,
-                "user_text": content,
+                "user_text": prepared.user_text,
                 "pubsub": pubsub,
                 "root": root,
                 "locks": locks,
@@ -483,7 +529,7 @@ async def start_message_turn(
         clear_best_effort(ctx, sid, root)
         locks.release(entry)
         raise
-    return ChatAck(status="accepted")
+    return ChatAck(status="accepted", prep_chat_reads=prepared.prep_chat_reads)
 
 
 async def run_interrupt(

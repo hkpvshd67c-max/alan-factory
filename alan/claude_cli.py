@@ -20,13 +20,12 @@ from typing import IO, Any, NoReturn, cast
 from alan import launch_spec, store
 from alan.agent_key import AgentKey
 from alan.claude_cli_grants import (
+    BUILD_NO_IMPL,
     BUILD_REPO_BINDING,
     CHAT_ISSUE_READ_TOOL,
+    EXPLORE_NO_IMPL,
     NO_TOOLS_BLOCK,
     OWN_REPO_LABEL,
-    build_no_impl,
-    configured_prep_chat_origin,
-    explore_no_impl,
 )
 from alan.claude_cli_journal import (
     OnEvent as OnEvent,
@@ -352,7 +351,7 @@ def format_build_system_prompt(shop_stats: str = "", repo_label: str = OWN_REPO_
     parts = [
         _BUILD_PROMPT_INTRO,
         BUILD_REPO_BINDING.format(repo_label=repo_label),
-        build_no_impl(repo_label, configured_prep_chat_origin()),
+        BUILD_NO_IMPL,
         UNTRUSTED_CONTENT_NOTICE,
         _CHAT_UX_LENS,
         _BUILD_SUMMARIZE_CONTRACT,
@@ -1515,13 +1514,12 @@ def _explore_dispatch_contract(team: str) -> str:
     )
 
 
-def format_explore_system_prompt(consultant_key: str, repo_label: str = OWN_REPO_LABEL) -> str:
+def format_explore_system_prompt(consultant_key: str, _repo_label: str = OWN_REPO_LABEL) -> str:
     c = get_consultant(consultant_key)
     intro = _EXPLORE_PROMPT_INTRO.format(label=c.label)
     steering = _EXPLORE_STEERING_SECTION.format(steering_text=c.steering_text)
     summarize = _EXPLORE_SUMMARIZE_CONTRACT.replace("{{label}}", c.label)
-    no_impl = explore_no_impl(repo_label, configured_prep_chat_origin())
-    parts = [intro, no_impl, UNTRUSTED_CONTENT_NOTICE, steering]
+    parts = [intro, EXPLORE_NO_IMPL, UNTRUSTED_CONTENT_NOTICE, steering]
     if c.carries_ux_lens:
         parts.append(_CHAT_UX_LENS)
     parts.extend([summarize, _explore_dispatch_contract(c.team)])

@@ -2205,6 +2205,8 @@ export interface components {
         };
         /** ChatAck */
         ChatAck: {
+            /** Prep Chat Reads */
+            prep_chat_reads?: components["schemas"]["PrepChatRead"][];
             /**
              * Status
              * @constant
@@ -2242,6 +2244,8 @@ export interface components {
             interrupted: boolean;
             /** Operations */
             operations?: string[];
+            /** Prep Chat Reads */
+            prep_chat_reads?: components["schemas"]["PrepChatRead"][];
             /**
              * Role
              * @enum {string}
@@ -3728,6 +3732,16 @@ export interface components {
          * @enum {string}
          */
         PrepChatKind: "build" | "explore";
+        /** PrepChatRead */
+        PrepChatRead: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "read" | "other_repository" | "not_found";
+            /** Title */
+            title?: string | null;
+        };
         /** PrepChatRef */
         PrepChatRef: {
             /** Consultant Key */

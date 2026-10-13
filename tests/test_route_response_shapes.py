@@ -272,7 +272,7 @@ def test_build_chat_message_send_returns_exact_ack_body(
     sid = bc_client.post("/api/build-chat/sessions", json=_BUILD_BODY).json()["session_id"]
     res = bc_client.post(f"/api/build-chat/sessions/{sid}/messages", json={"content": "hi"})
     assert res.status_code == 202
-    assert res.json() == {"status": "accepted"}
+    assert res.json() == {"status": "accepted", "prep_chat_reads": []}
 
 
 def test_explore_chat_message_send_returns_exact_ack_body(
@@ -282,7 +282,7 @@ def test_explore_chat_message_send_returns_exact_ack_body(
     sid = ec_client.post("/api/explore-chat/sessions", json=_EXPLORE_BODY).json()["session_id"]
     res = ec_client.post(f"/api/explore-chat/sessions/{sid}/messages", json={"content": "hi"})
     assert res.status_code == 202
-    assert res.json() == {"status": "accepted"}
+    assert res.json() == {"status": "accepted", "prep_chat_reads": []}
 
 
 def _flatten_routes(routes: list[Any]) -> list[Any]:
