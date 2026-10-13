@@ -55,6 +55,13 @@ Setup's own time: plan on 1 to 2 hours in total. Setup prints the same estimate.
 
 Your first merged pull request takes longer than setup. A task has to be planned, implemented, verified, reviewed and run through CI, and at posture `propose` the merge waits for you.
 
+### Opening the web UI
+
+Once setup is complete, the web UI is at `http://127.0.0.1:8585`. It loads and can be viewed without a token, but making changes needs the control token. Setup never prints the token.
+
+1. Copy the token to the clipboard with `pbcopy < ~/.alan/state/control_token`.
+2. In the UI, click the gear icon, named **Global settings** to screen readers, paste the token into **Control token** and click **Save**.
+
 ### If setup stops
 
 With a fork, run `./setup.sh` or the resume command setup prints from inside `~/alan-factory`. With a private copy, if setup stops before it has created your copy, run `./setup.sh` again from the template checkout; once your copy exists, setup prints a resume command: run it from inside `~/alan-factory`.
