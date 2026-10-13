@@ -12,7 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
@@ -41,12 +41,22 @@ def _empty_operations() -> list[str]:
     return []
 
 
+class PrepChatRead(BaseModel):
+    status: Literal["read", "other_repository", "not_found"]
+    title: str | None = None
+
+
+def _empty_prep_chat_reads() -> list[PrepChatRead]:
+    return []
+
+
 class ChatMessage(BaseModel):
     role: str = Field(pattern=r"^(user|assistant)$")
     content: str
     ts: datetime
     interrupted: bool = False
     operations: list[str] = Field(default_factory=_empty_operations)
+    prep_chat_reads: list[PrepChatRead] = Field(default_factory=_empty_prep_chat_reads)
 
 
 def _empty_transcript() -> list[ChatMessage]:
@@ -149,7 +159,9 @@ def create_session(
     raise cfg.error("could not allocate unique session_id")
 
 
-def load_session(cfg: ChatCoreConfig[S], session_id: str, *, root: Path | None = None) -> S:
+def _read_session(
+    cfg: ChatCoreConfig[S], session_id: str, root: Path | None
+) -> tuple[S, dict[str, Any]]:
     path = _session_dir(cfg, session_id, root) / _SESSION_FILE
     try:
         raw = path.read_text(encoding="utf-8")
@@ -160,33 +172,47 @@ def load_session(cfg: ChatCoreConfig[S], session_id: str, *, root: Path | None =
     except json.JSONDecodeError as exc:
         raise cfg.error(f"{cfg.label} session corrupt: {session_id}") from exc
     try:
-        session = cfg.session_adapter.validate_python(raw_obj)
+        return cfg.session_adapter.validate_python(raw_obj), raw_obj
     except ValidationError as exc:
         raise cfg.error(f"{cfg.label} session corrupt: {session_id}") from exc
-    if "cli_session_id" not in raw_obj:
-        session = _bridge_legacy_cli_session_id(cfg, session, root)
-    if "engine_key" not in raw_obj:
-        session = _bridge_legacy_engine_key(cfg, session, root)
-    return session
 
 
-def _bridge_legacy_cli_session_id(cfg: ChatCoreConfig[S], session: S, root: Path | None) -> S:
+def _legacy_cli_session_id(session: S) -> S:
     has_assistant_message = any(m.role == "assistant" for m in session.transcript)
     if not has_assistant_message:
         return session
-    updated = session.model_copy(update={"cli_session_id": session.session_id})
-    _write_session(_session_dir(cfg, session.session_id, root), updated)
-    return updated
+    return session.model_copy(update={"cli_session_id": session.session_id})
 
 
 def _alan_own_repo_engine_key() -> str:
     return engine_config.default_engine_config().repo.slug
 
 
-def _bridge_legacy_engine_key(cfg: ChatCoreConfig[S], session: S, root: Path | None) -> S:
-    updated = session.model_copy(update={"engine_key": _alan_own_repo_engine_key()})
-    _write_session(_session_dir(cfg, session.session_id, root), updated)
-    return updated
+def _legacy_engine_key(session: S) -> S:
+    return session.model_copy(update={"engine_key": _alan_own_repo_engine_key()})
+
+
+def _peek_bridged(
+    cfg: ChatCoreConfig[S], session_id: str, root: Path | None
+) -> tuple[S, bool]:
+    session, raw_obj = _read_session(cfg, session_id, root)
+    bridged = session
+    if "cli_session_id" not in raw_obj:
+        bridged = _legacy_cli_session_id(bridged)
+    if "engine_key" not in raw_obj:
+        bridged = _legacy_engine_key(bridged)
+    return bridged, bridged is not session
+
+
+def peek_session(cfg: ChatCoreConfig[S], session_id: str, *, root: Path | None = None) -> S:
+    return _peek_bridged(cfg, session_id, root)[0]
+
+
+def load_session(cfg: ChatCoreConfig[S], session_id: str, *, root: Path | None = None) -> S:
+    session, bridged = _peek_bridged(cfg, session_id, root)
+    if bridged:
+        _write_session(_session_dir(cfg, session_id, root), session)
+    return session
 
 
 def append_user_message_and_mark_started(
@@ -245,7 +271,7 @@ def _filter_by_project(sessions: list[S], project_id: str | None) -> list[S]:
     return [s for s in sessions if s.project_id == project_id]
 
 
-def _resolve_known_scope(engine_key: str) -> engine_config.RepoIdentity | None:
+def resolve_known_scope(engine_key: str) -> engine_config.RepoIdentity | None:
     cfg = engine_config.lookup_by_slug(engine_key)
     if cfg is not None:
         return cfg.repo
@@ -257,7 +283,7 @@ def _resolve_known_scope(engine_key: str) -> engine_config.RepoIdentity | None:
 def _filter_by_engine_key(sessions: list[S], engine_key: str | None) -> list[S]:
     if engine_key is None:
         return sessions
-    target = _resolve_known_scope(engine_key)
+    target = resolve_known_scope(engine_key)
     if target is None:
         return []
     return [s for s in sessions if engine_config.canonical_scope_key(s.engine_key) == target]

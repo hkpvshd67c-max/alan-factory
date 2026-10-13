@@ -41,24 +41,19 @@ async def get_workspace_prep_chat(
     if session_id is None:
         raise HTTPException(status_code=404, detail="no archived preparation chat")
     try:
-        marker = await run_in_threadpool(prep_chat_mod.load_marker, ws.path, session_id)
-        session = await run_in_threadpool(
-            prep_chat_mod.load_archived_session, marker.kind, session_id, ws.path
-        )
+        archived = await run_in_threadpool(prep_chat_mod.read_archived, ws.path, session_id)
     except prep_chat_mod.PrepChatError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    brief = await run_in_threadpool(
-        prep_chat_mod.load_archived_brief, marker.kind, session_id, ws.path
-    )
+    session = archived.session
     return PrepChatTranscriptOut(
         session_id=session.session_id,
-        kind=marker.kind,
-        consultant_key=marker.consultant_key,
+        kind=archived.marker.kind,
+        consultant_key=archived.marker.consultant_key,
         engine_key=session.engine_key,
-        title=marker.title,
+        title=archived.marker.title,
         created_at=session.created_at,
         messages=[
             ChatMessageOut.model_validate(m, from_attributes=True) for m in session.transcript
         ],
-        brief=brief,
+        brief=archived.brief,
     )

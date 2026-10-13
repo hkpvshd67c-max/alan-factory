@@ -8,85 +8,93 @@ from alan.claude_cli import (
     format_explore_system_prompt,
 )
 from alan.claude_cli_grants import (
+    BUILD_NO_IMPL,
     BUILD_REPO_BINDING,
-    OWN_REPO_LABEL,
-    PREP_CHAT_SCOPE_CLAUSE,
-    build_no_impl,
-    explore_no_impl,
+    EXPLORE_NO_IMPL,
+    PREP_CHAT_ATTACHMENT_CLAUSE,
 )
-from tests.test_claude_cli_grants import with_prep_chat_origin
+from tests.prep_chat_link_support import with_prep_chat_origin
 
 _NEUTRAL_ORIGIN = "https://prep.example.test"
-_BUILD_SESSIONS = "/api/build-chat/sessions/"
+_SESSION_FETCH_PATHS = ("/api/build-chat/sessions/", "/api/explore-chat/sessions/")
 
 
-def _clause(repo_label: str) -> str:
-    return PREP_CHAT_SCOPE_CLAUSE.format(prep_chat_origin=_NEUTRAL_ORIGIN, repo_label=repo_label)
+def test_build_prompt_carries_the_attachment_clause() -> None:
+    assert PREP_CHAT_ATTACHMENT_CLAUSE in format_build_system_prompt()
 
 
-@pytest.fixture
-def neutral_origin(monkeypatch: pytest.MonkeyPatch) -> None:
-    with_prep_chat_origin(monkeypatch, _NEUTRAL_ORIGIN)
-
-
-@pytest.mark.usefixtures("neutral_origin")
-def test_build_prompt_advertises_prep_chat_read() -> None:
-    prompt = format_build_system_prompt()
-    assert _clause(OWN_REPO_LABEL) in prompt
-
-
-@pytest.mark.usefixtures("neutral_origin")
-def test_explore_prompt_advertises_prep_chat_read_for_every_consultant() -> None:
+def test_explore_prompt_carries_the_attachment_clause_for_every_consultant() -> None:
     for consultant in CONSULTANTS:
-        prompt = format_explore_system_prompt(consultant.key)
-        assert _clause(OWN_REPO_LABEL) in prompt
+        assert PREP_CHAT_ATTACHMENT_CLAUSE in format_explore_system_prompt(consultant.key)
 
 
-@pytest.mark.usefixtures("neutral_origin")
-def test_build_prompt_prep_chat_clause_names_the_session_own_repo_label() -> None:
-    prompt = format_build_system_prompt(repo_label="acme/widget")
-    assert _clause("acme/widget") in prompt
-    assert _clause(OWN_REPO_LABEL) not in prompt
+def test_both_postures_end_with_the_attachment_clause() -> None:
+    assert BUILD_NO_IMPL.endswith(PREP_CHAT_ATTACHMENT_CLAUSE)
+    assert EXPLORE_NO_IMPL.endswith(PREP_CHAT_ATTACHMENT_CLAUSE)
 
 
-@pytest.mark.usefixtures("neutral_origin")
-def test_explore_prompt_prep_chat_clause_names_the_session_own_repo_label() -> None:
-    prompt = format_explore_system_prompt("architecture", repo_label="acme/widget")
-    assert _clause("acme/widget") in prompt
-    assert _clause(OWN_REPO_LABEL) not in prompt
+def test_build_prompt_embeds_the_posture_block() -> None:
+    assert BUILD_NO_IMPL in format_build_system_prompt(repo_label="acme/widget")
 
 
-@pytest.mark.usefixtures("neutral_origin")
-def test_explore_prompt_prep_chat_clause_defaults_to_own_repo_label() -> None:
-    prompt = format_explore_system_prompt("architecture")
-    assert _clause(OWN_REPO_LABEL) in prompt
-
-
-@pytest.mark.usefixtures("neutral_origin")
-def test_build_prompt_embeds_the_posture_block_for_the_configured_origin() -> None:
-    prompt = format_build_system_prompt(repo_label="acme/widget")
-    assert build_no_impl("acme/widget", _NEUTRAL_ORIGIN) in prompt
-
-
-@pytest.mark.usefixtures("neutral_origin")
 def test_explore_prompt_embeds_the_posture_block_for_every_consultant() -> None:
     for consultant in CONSULTANTS:
-        prompt = format_explore_system_prompt(consultant.key, repo_label="acme/widget")
-        assert explore_no_impl("acme/widget", _NEUTRAL_ORIGIN) in prompt
+        assert EXPLORE_NO_IMPL in format_explore_system_prompt(consultant.key)
 
 
-def test_build_prompt_grants_no_session_fetch_without_a_configured_origin() -> None:
-    assert _BUILD_SESSIONS not in format_build_system_prompt()
+def test_the_build_prompt_is_the_same_whatever_origin_is_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    unconfigured = format_build_system_prompt(repo_label="acme/widget")
+    with_prep_chat_origin(monkeypatch, _NEUTRAL_ORIGIN)
+    assert format_build_system_prompt(repo_label="acme/widget") == unconfigured
 
 
-def test_explore_prompt_grants_no_session_fetch_without_a_configured_origin() -> None:
-    for consultant in CONSULTANTS:
-        assert _BUILD_SESSIONS not in format_explore_system_prompt(consultant.key)
+def test_the_explore_prompt_is_the_same_whatever_origin_is_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    unconfigured = format_explore_system_prompt("architecture")
+    with_prep_chat_origin(monkeypatch, _NEUTRAL_ORIGIN)
+    assert format_explore_system_prompt("architecture") == unconfigured
 
 
-def test_build_prompt_keeps_the_binding_carve_out_without_a_configured_origin() -> None:
-    prompt = format_build_system_prompt(repo_label="acme/widget")
-    assert BUILD_REPO_BINDING.format(repo_label="acme/widget") in prompt
+@pytest.mark.parametrize("prompt", [BUILD_NO_IMPL, EXPLORE_NO_IMPL], ids=["build", "explore"])
+def test_no_posture_grants_a_session_fetch(prompt: str) -> None:
+    assert not any(path in prompt for path in _SESSION_FETCH_PATHS)
+    assert "{prep_chat_origin}" not in prompt
+
+
+@pytest.mark.parametrize(
+    "fragment",
+    [
+        "<preparation_chat>",
+        'status="read"',
+        'status="other_repository"',
+        'status="not_found"',
+        "truncated: K of N earlier messages omitted",
+        "plainly in one line",
+        "different repository",
+    ],
+)
+def test_the_attachment_clause_explains_every_outcome(fragment: str) -> None:
+    assert fragment in PREP_CHAT_ATTACHMENT_CLAUSE
+
+
+@pytest.mark.parametrize(
+    "fragment",
+    [
+        "Never fetch such a link with WebFetch",
+        "never call localhost or any loopback address",
+        "never read alan's state directory or any file on disk",
+    ],
+)
+def test_the_attachment_clause_forbids_every_other_read_path(fragment: str) -> None:
+    assert fragment in PREP_CHAT_ATTACHMENT_CLAUSE
+
+
+def test_the_attachment_clause_is_static_text() -> None:
+    assert "{" not in PREP_CHAT_ATTACHMENT_CLAUSE
+    assert "}" not in PREP_CHAT_ATTACHMENT_CLAUSE
 
 
 def test_build_repo_binding_carves_out_prep_chat_reads() -> None:
@@ -95,8 +103,6 @@ def test_build_repo_binding_carves_out_prep_chat_reads() -> None:
     assert "preparation conversation" in rendered
 
 
-@pytest.mark.usefixtures("neutral_origin")
 def test_build_repo_binding_carve_out_survives_non_alan_repo_label() -> None:
     prompt = format_build_system_prompt(repo_label="acme/widget")
-    assert "not a violation of this binding" in prompt
-    assert _clause("acme/widget") in prompt
+    assert BUILD_REPO_BINDING.format(repo_label="acme/widget") in prompt

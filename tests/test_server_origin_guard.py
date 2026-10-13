@@ -10,7 +10,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from starlette.websockets import WebSocketDisconnect
 
 from alan import server
-from tests.test_claude_cli_grants import with_prep_chat_origin
+from tests.prep_chat_link_support import with_prep_chat_origin
 
 _LOOPBACK_BASE_URL = "http://127.0.0.1:8585"
 _LOOPBACK_HOST = "127.0.0.1:8585"

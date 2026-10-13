@@ -38,6 +38,7 @@ from alan.routes._deps import (
     CreateSessionResponse,
     ExploreChatLocksDep,
     ExploreChatSessionsRootDep,
+    PrepChatLinkEnvDep,
     PubSubDep,
     WorkspaceIndexDep,
     WorkspacesRootDep,
@@ -103,9 +104,7 @@ _CTX: ChatRouterCtx[explore_chat_mod.ExploreChatSession] = ChatRouterCtx(
     channel_prefix="explore_chat",
     label=_LABEL,
     summarize_sentinel=EXPLORE_SUMMARIZE_SENTINEL,
-    system_prompt=lambda session: format_explore_system_prompt(
-        session.consultant_key, explore_chat_repo_mod.repo_label(session.engine_key)
-    ),
+    system_prompt=lambda session: format_explore_system_prompt(session.consultant_key),
     agent=lambda session: agent_key.explore_chat(session.consultant_key),
     pre_turn=_explore_pre_turn,
     resolve_cwd=_explore_resolve_cwd,
@@ -366,9 +365,16 @@ async def send_explore_chat_message(
     root: ExploreChatSessionsRootDep,
     pubsub: PubSubDep,
     locks: ExploreChatLocksDep,
+    link_env: PrepChatLinkEnvDep,
 ) -> _chat_router.ChatAck:
     return await _chat_router.start_message_turn(
-        _CTX, session_id, body.content, root, pubsub, locks
+        _CTX,
+        session_id,
+        body.content,
+        root,
+        pubsub,
+        locks,
+        _chat_router.link_preparer(link_env),
     )
 
 

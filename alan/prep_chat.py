@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import shutil
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -156,8 +157,8 @@ def load_archived_session(
     root = archived_root(ws_path)
     try:
         if kind is PrepChatKind.BUILD:
-            return _chat_core.load_session(build_chat_mod.CONFIG, session_id, root=root)
-        return _chat_core.load_session(explore_chat_mod.CONFIG, session_id, root=root)
+            return _chat_core.peek_session(build_chat_mod.CONFIG, session_id, root=root)
+        return _chat_core.peek_session(explore_chat_mod.CONFIG, session_id, root=root)
     except _chat_core.ChatCoreError as exc:
         raise PrepChatError(str(exc)) from exc
 
@@ -169,3 +170,17 @@ def load_archived_brief(
     if kind is PrepChatKind.BUILD:
         return _chat_core.load_brief(build_chat_mod.CONFIG, session_id, root=root)
     return _chat_core.load_brief(explore_chat_mod.CONFIG, session_id, root=root)
+
+
+@dataclass(frozen=True)
+class ArchivedPrepChat:
+    marker: PrepChatMarker
+    session: _chat_core.ChatSession
+    brief: _chat_core.ChatBrief | None
+
+
+def read_archived(ws_path: Path, session_id: str) -> ArchivedPrepChat:
+    marker = load_marker(ws_path, session_id)
+    session = load_archived_session(marker.kind, session_id, ws_path)
+    brief = load_archived_brief(marker.kind, session_id, ws_path)
+    return ArchivedPrepChat(marker=marker, session=session, brief=brief)

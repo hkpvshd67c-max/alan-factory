@@ -12,7 +12,6 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
-from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 from fastapi.concurrency import run_in_threadpool
@@ -29,8 +28,7 @@ import alan.project as project_mod
 import alan.project_amendment as project_amendment_mod
 import alan.project_doc as project_doc_mod
 import alan.project_roadmap as project_roadmap_mod
-from alan import _chat_core, control_plane, roots
-from alan.claude_cli_grants import configured_prep_chat_origin
+from alan import _chat_core, control_plane, host_allowlist, roots
 from alan.errors import AppError
 from alan.forge import set_active_forge
 from alan.forge_gh import GhForge
@@ -472,7 +470,6 @@ app.include_router(scenario_binding_router)
 app.include_router(pr_attach_router)
 
 
-_LOOPBACK_HOSTNAMES = frozenset({"localhost", "127.0.0.1", "::1"})
 _HOST_HEADER_RE = re.compile(
     r"^(?:\[(?P<v6>[0-9A-Fa-f:.]+)\]|(?P<name>[A-Za-z0-9.-]+))(?::(?P<port>\d+))?$"
 )
@@ -487,29 +484,12 @@ _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 _SAME_ORIGIN_FETCH_SITES = frozenset({"same-origin", "none"})
 
 
-def _origin_hostname(origin: str) -> str | None:
-    return urlsplit(origin).hostname
-
-
-def _allowed_hostnames() -> frozenset[str]:
-    origin = configured_prep_chat_origin()
-    if origin is None:
-        return _LOOPBACK_HOSTNAMES
-    try:
-        hostname = _origin_hostname(origin)
-    except ValueError:
-        return _LOOPBACK_HOSTNAMES
-    if hostname is None:
-        return _LOOPBACK_HOSTNAMES
-    return _LOOPBACK_HOSTNAMES | {hostname.lower()}
-
-
 def _host_allowed(raw: str) -> bool:
     match = _HOST_HEADER_RE.fullmatch(raw)
     if match is None:
         return False
     hostname = match["v6"] or match["name"]
-    return hostname.lower() in _allowed_hostnames()
+    return hostname.lower() in host_allowlist.allowed_hostnames()
 
 
 def _serialized_origin_hostname(origin: str) -> str | None:
@@ -527,7 +507,7 @@ def _origin_allowed(headers: Headers) -> bool:
     if len(origins) != 1:
         return False
     hostname = _serialized_origin_hostname(origins[0])
-    return hostname is not None and hostname.lower() in _allowed_hostnames()
+    return hostname is not None and hostname.lower() in host_allowlist.allowed_hostnames()
 
 
 def _fetch_site_allowed(headers: Headers) -> bool:
