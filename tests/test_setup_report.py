@@ -50,7 +50,7 @@ ITEM_LINES = (
     "[ok] the Claude check passed",
     f"[ok] {UPDATE_LABEL} is loaded from this checkout",
     "[ok] the service was restarted after the last change to its configuration",
-    "[ok] alan reports no dispatch requirement as not_ready or unknown",
+    "[ok] alan-factory reports no dispatch requirement as not_ready or unknown",
 )
 
 

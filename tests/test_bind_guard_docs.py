@@ -49,8 +49,8 @@ def _line_containing(path: Path, marker: str) -> str:
     [
         "any local account or process that can reach the port can read the api and can also "
         "create, dispatch, stop and delete work",
-        "runs agents with shell access as the user alan runs as",
-        "running alan as a dedicated macos user is the mitigation",
+        "runs agents with shell access as the user alan-factory runs as",
+        "running alan-factory as a dedicated macos user is the mitigation",
     ],
 )
 def test_security_tutorial_states_the_dispatch_exposure(clause: str) -> None:
@@ -111,8 +111,8 @@ def test_security_tutorial_warns_that_forwarding_bypasses_the_bind_guard(clause:
 @pytest.mark.parametrize(
     "clause",
     [
-        "alan also refuses a request other than get, head or options when it comes from a page "
-        "on another site",
+        "alan-factory also refuses a request other than get, head or options when it comes "
+        "from a page on another site",
         "a local process that is not a browser, or a page served from a loopback hostname on any "
         "port, can still start agents, stop them and delete their work without the token",
     ],
@@ -134,8 +134,8 @@ def test_security_tutorial_states_the_cross_site_refusal_and_its_narrowed_reach(
         "403` with `origin not allowed",
         "a local process that is not a browser still needs no token",
         "any page served from a loopback hostname on any port passes the origin check",
-        "a page on another site cannot read the response to a request it sends to alan",
-        "alan also refuses the write itself",
+        "a page on another site cannot read the response to a request it sends to alan-factory",
+        "alan-factory also refuses the write itself",
     ],
 )
 def test_security_tutorial_cross_site_section_states_the_refusal_and_its_limits(

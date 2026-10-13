@@ -26,8 +26,8 @@ INSTRUCTIONS_TEXT = "\n".join(
         "     (classic).",
         "A fine-grained token does not work: it cannot reach a repository owned by another",
         "account. Paste the bot's token below. It is not shown, not printed and not passed on",
-        "any command line; setup checks it with GitHub and stores it in alan's own secret store",
-        "as the reviewer credential.",
+        "any command line; setup checks it with GitHub and stores it in alan-factory's own",
+        "secret store as the reviewer credential.",
     ]
 )
 NO_EXPIRY_TEXT = (
@@ -126,7 +126,10 @@ def print_expiry(expires_on: date | None) -> None:
     if expires_on is None:
         print(NO_EXPIRY_TEXT)
         return
-    print(f"The token expires on {expires_on.isoformat()} (UTC); alan warns you a week before.")
+    print(
+        f"The token expires on {expires_on.isoformat()} (UTC); "
+        "alan-factory warns you a week before."
+    )
 
 
 def run_verify(

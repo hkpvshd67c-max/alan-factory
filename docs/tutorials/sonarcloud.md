@@ -4,7 +4,7 @@ SonarCloud reviews the code in pull requests on your copy of the repository and 
 
 ## SonarCloud is optional
 
-A copy is ready, dispatches work and passes `gate` without SonarCloud. Nothing in alan requires it.
+A copy is ready, dispatches work and passes `gate` without SonarCloud. Nothing in alan-factory requires it.
 
 - To skip it, press Enter at the admin token prompt during setup. Pass `--no-sonar` to skip it without being asked: `./setup.sh --no-sonar`.
 - To connect it later, run this from inside your copy of the repository: `scripts/setup_macos.sh --only sonar`.

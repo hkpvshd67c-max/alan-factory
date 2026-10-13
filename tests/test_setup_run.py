@@ -97,7 +97,7 @@ def test_the_closing_line_says_alan_is_up_and_no_longer_lists_the_repository_bin
 ) -> None:
     _, run = fresh
     closing = run.stdout.strip().splitlines()[-2:]
-    assert "alan is up" in closing[0]
+    assert "alan-factory is up" in closing[0]
     assert "not ready to dispatch" in closing[0]
     assert "P1.9b" not in closing[1]
     assert "binding" not in closing[1]
@@ -639,6 +639,6 @@ def test_only_runs_exactly_the_named_step_and_does_not_claim_alan_is_up(tmp_path
     run = run_setup(sandbox, "--only", "preflight")
     assert run.returncode == 0, run.output
     assert run.headers() == ["preflight"]
-    assert "did not start alan" in run.stdout
-    assert "alan is up" not in run.stdout
+    assert "did not start alan-factory" in run.stdout
+    assert "alan-factory is up" not in run.stdout
     assert sandbox.state_file.read_text(encoding="utf-8").splitlines() == ["preflight"]

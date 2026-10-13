@@ -170,7 +170,7 @@ def test_a_full_run_ends_with_the_verifier_stored_the_updater_loaded_and_a_short
     assert stored_secrets(sandbox)[0]["sha256"] == sha256(BOT_SENTINEL)
     assert loaded_labels(sandbox) == ["ai.alan", UPDATE_LABEL]
     closing = run.stdout.strip().splitlines()[-2:]
-    assert "alan is up" in closing[0]
+    assert "alan-factory is up" in closing[0]
     assert closing[1] == "Still pending: SonarCloud, the Claude check and the final report."
 
 

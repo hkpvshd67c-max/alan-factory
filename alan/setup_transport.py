@@ -36,21 +36,21 @@ PERMISSIONS_TEXT = "\n".join(
         "    Workflows: Read and write",
         "    Commit statuses: Read-only",
         "    Metadata: Read-only (GitHub adds it by itself)",
-        "Why Administration write: alan applies your branch protection and the squash-merge and",
-        "branch-deletion settings through GitHub's administration API, and no other permission",
-        "allows that. Without it the protect step fails.",
+        "Why Administration write: alan-factory applies your branch protection and the",
+        "squash-merge and branch-deletion settings through GitHub's administration API, and no",
+        "other permission allows that. Without it the protect step fails.",
         "Paste the token below. It is not shown, not printed and not passed on any command line;",
-        "setup checks it with GitHub once and stores it in alan's own secret store.",
+        "setup checks it with GitHub once and stores it in alan-factory's own secret store.",
     ]
 )
 RISK_TEXT = "\n".join(
     [
-        "You asked setup to use your own gh token as alan's transport credential (--use-gh-token).",
-        "That token reaches every repository your GitHub account can reach, not only this one.",
-        "It is copied into alan's secret store under ~/.alan (mode 600) and stays there; every",
-        "slot clone, fetch and push of this copy uses it. A fine-grained token scoped to this",
-        "repository limits the damage if the store leaks, so prefer it. Revoke the copy when you",
-        "uninstall.",
+        "You asked setup to use your own gh token as alan-factory's transport credential",
+        "(--use-gh-token). That token reaches every repository your GitHub account can reach,",
+        "not only this one. It is copied into alan-factory's secret store under ~/.alan",
+        "(mode 600) and stays there; every slot clone, fetch and push of this copy uses it.",
+        "A fine-grained token scoped to this repository limits the damage if the store leaks,",
+        "so prefer it. Revoke the copy when you uninstall.",
     ]
 )
 _GH_SESSION_MESSAGE = "the gh session token cannot be read; sign in with gh auth login"

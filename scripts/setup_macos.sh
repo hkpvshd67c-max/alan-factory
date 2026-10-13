@@ -378,14 +378,14 @@ plist_is_here() {
 guard_agent() {
   local label="$1" runner="$2"
   if agent_loaded "$label" && ! agent_is_here "$label" "$runner"; then
-    refuse existing-install "$label is loaded from a different checkout, or from one setup cannot determine; this Mac already runs an alan install"
+    refuse existing-install "$label is loaded from a different checkout, or from one setup cannot determine; this Mac already runs an alan-factory install"
   fi
 }
 
 guard_existing_install() {
   CURRENT_STEP="preflight"
   if [ -e "$QUEUE_DB_FILE" ] && [ ! -e "$SETUP_STATE_FILE" ]; then
-    refuse existing-install "the alan queue database exists without a setup state file; this Mac already runs an alan install"
+    refuse existing-install "the alan-factory queue database exists without a setup state file; this Mac already runs an alan-factory install"
   fi
   guard_agent "$SERVICE_LABEL" run_alan.sh
   guard_agent "$UPDATE_LABEL" update_runner.sh
@@ -471,13 +471,13 @@ print_checklist() {
   if [ "${SETUP_HANDED_OVER:-}" = 1 ]; then
     return 0
   fi
-  say "alan setup: what will run, and what only you can do"
+  say "alan-factory setup: what will run, and what only you can do"
   say ""
-  say "This run installs the tools alan needs, builds it, writes its profile, starts it on this Mac, binds and hardens your GitHub repository, optionally configures SonarCloud, stores the verifier bot's credential, triggers a CI run, checks that Claude Code works under launchd, installs the self-updater, waits for CI (and for SonarCloud, if you connected it) and prints a final report."
+  say "This run installs the tools alan-factory needs, builds it, writes its profile, starts it on this Mac, binds and hardens your GitHub repository, optionally configures SonarCloud, stores the verifier bot's credential, triggers a CI run, checks that Claude Code works under launchd, installs the self-updater, waits for CI (and for SonarCloud, if you connected it) and prints a final report."
   say "Steps you do by hand, in order (setup tells you when each is needed):"
   say "  1. Sign in to GitHub in your browser when 'gh auth login' opens it (about 2 minutes)."
   say "  2. Create a fine-grained GitHub token for your repository, in your browser (about 3 minutes); setup prints the exact permissions when it asks for the token."
-  say "  3. Approve the GitHub apps alan needs on your repository (about 5 minutes, a later setup step)."
+  say "  3. Approve the GitHub apps alan-factory needs on your repository (about 5 minutes, a later setup step)."
   say "     If your copy is a fork, also open its Actions tab and click 'I understand my workflows, go ahead and enable them'; a fork starts with its workflows off."
   say "  4. Optional: import your repository into SonarCloud and create two SonarCloud tokens, an admin token and an analysis token from a different SonarCloud user (about 10 minutes); the sonar step asks for both. Press Enter at its first prompt, or pass --no-sonar, to skip SonarCloud."
   say "  5. Create a separate GitHub account for the verifier bot, invite it to your repository with write access, accept the invitation as the bot and create a classic token for it (about 10 minutes); the verifier step asks for the token."
@@ -513,14 +513,14 @@ print_closing() {
   say ""
   if step_selected start; then
     pending="$(pending_finish_items | join_items)"
-    say "alan is up at http://127.0.0.1:$SERVICE_PORT and serving this checkout's commit, but it is not ready to dispatch work yet. SonarCloud is optional and never blocks dispatch; it is listed below only until the latch step has run."
+    say "alan-factory is up at http://127.0.0.1:$SERVICE_PORT and serving this checkout's commit, but it is not ready to dispatch work yet. SonarCloud is optional and never blocks dispatch; it is listed below only until the latch step has run."
     if binding_complete; then
       say "Still pending: $pending."
     else
       say "Still pending: binding and hardening your GitHub repository (P1.9b), then $pending."
     fi
   else
-    say "setup: ran $SELECTED_STEPS; this run did not start alan"
+    say "setup: ran $SELECTED_STEPS; this run did not start alan-factory"
   fi
 }
 
@@ -593,7 +593,7 @@ probe_disk() {
 
 print_energy_guidance() {
   note ok "energy settings (guidance only; setup changes nothing)"
-  say "      For an always-on alan: turn off automatic sleeping when the display is off, keep the Mac on power,"
+  say "      For an always-on alan-factory: turn off automatic sleeping when the display is off, keep the Mac on power,"
   say "      and let it start up automatically after a power failure (System Settings, Energy)."
 }
 
@@ -849,7 +849,7 @@ step_profile() {
 
 require_profile_before_boot() {
   if [ ! -f "$SETUP_STATE_FILE" ] || [ ! -f "$PROFILE_FILE" ]; then
-    refuse profile-before-boot "the setup state file and the default-engine profile must both exist before alan is started; run the profile step first"
+    refuse profile-before-boot "the setup state file and the default-engine profile must both exist before alan-factory is started; run the profile step first"
   fi
 }
 
@@ -1095,9 +1095,9 @@ bind_expect() {
     return 0
   fi
   case "$code" in
-    000) refuse local-api "the local alan API at $API_BASE did not answer while $doing; run the start step first" ;;
-    401 | 403) refuse control-token "the local alan API did not accept the control token (HTTP $code) while $doing; it may have expired" ;;
-    *) refuse local-api "the local alan API answered HTTP $code while $doing" ;;
+    000) refuse local-api "the local alan-factory API at $API_BASE did not answer while $doing; run the start step first" ;;
+    401 | 403) refuse control-token "the local alan-factory API did not accept the control token (HTTP $code) while $doing; it may have expired" ;;
+    *) refuse local-api "the local alan-factory API answered HTTP $code while $doing" ;;
   esac
 }
 
@@ -1889,7 +1889,7 @@ report_readiness() {
     report_readiness_row "$kind" "$step" "$engine" "$requirement" "$state" "$message"
   done < "$rows"
   if [ "$rc" = 0 ]; then
-    note ok "alan reports no dispatch requirement as not_ready or unknown"
+    note ok "alan-factory reports no dispatch requirement as not_ready or unknown"
   fi
 }
 
@@ -1906,7 +1906,7 @@ step_report() {
     add_failed report
     return 0
   fi
-  say "setup is complete: every mandatory requirement holds and alan reports nothing left to do before it can dispatch."
+  say "setup is complete: every mandatory requirement holds and alan-factory reports nothing left to do before it can dispatch."
 }
 
 remove_agent() {
@@ -1945,8 +1945,8 @@ print_manual_cleanup() {
   say "  - the two SonarCloud tokens (revoke both in SonarCloud); the analysis token's copy and the two SonarCloud variables stay in your repository's Actions settings until you delete them"
   say "  - the GitHub apps installed on your repository (GitHub, Settings, Applications)"
   say "  - the verifier bot account and its access token (revoke the token first, then delete the account)"
-  say "  - the bot's token copy in alan's secret store ($ALAN_HOME_DIR/secrets) and the ALAN_VERIFIER_LOGIN line in $SECRETS_FILE; both stay until you delete them"
-  say "  - the transport token you created for your repository (GitHub, Settings, Developer settings, Fine-grained tokens, Revoke); alan's copy stays in $ALAN_HOME_DIR/secrets until you delete it"
+  say "  - the bot's token copy in alan-factory's secret store ($ALAN_HOME_DIR/secrets) and the ALAN_VERIFIER_LOGIN line in $SECRETS_FILE; both stay until you delete them"
+  say "  - the transport token you created for your repository (GitHub, Settings, Developer settings, Fine-grained tokens, Revoke); alan-factory's copy stays in $ALAN_HOME_DIR/secrets until you delete it"
 }
 
 step_uninstall() {

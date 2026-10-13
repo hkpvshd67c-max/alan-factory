@@ -140,7 +140,9 @@ def test_the_expiry_notice_names_the_date_or_says_no_reminder_will_fire(
     setup_verifier.print_expiry(date(2099, 6, 30))
     setup_verifier.print_expiry(None)
     printed = capsys.readouterr().out.splitlines()
-    assert printed[0] == "The token expires on 2099-06-30 (UTC); alan warns you a week before."
+    assert printed[0] == (
+        "The token expires on 2099-06-30 (UTC); alan-factory warns you a week before."
+    )
     assert "no expiry reminder will fire" in printed[1]
 
 

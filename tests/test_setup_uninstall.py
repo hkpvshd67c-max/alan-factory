@@ -123,7 +123,7 @@ def test_uninstall_prints_the_manual_cleanup_list(tmp_path: Path) -> None:
     assert "the verifier bot account and its access token" in run.stdout
     assert "the transport token you created for your repository" in run.stdout
     assert "Revoke" in run.stdout
-    assert "alan's copy stays in" in run.stdout
+    assert "alan-factory's copy stays in" in run.stdout
 
 
 def test_uninstall_removes_the_updater_agent_the_updater_step_installed(tmp_path: Path) -> None:
@@ -151,7 +151,7 @@ def test_uninstall_keeps_the_stored_reviewer_credential_and_the_login_line(
     run = run_setup(sandbox, "--uninstall")
     assert run.returncode == 0, run.output
     assert snapshot_files(sandbox.secrets_file) == before
-    assert "the bot's token copy in alan's secret store" in run.stdout
+    assert "the bot's token copy in alan-factory's secret store" in run.stdout
     assert "ALAN_VERIFIER_LOGIN line" in run.stdout
     assert "both stay until you delete them" in run.stdout
 

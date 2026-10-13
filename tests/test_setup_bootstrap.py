@@ -352,7 +352,7 @@ def test_only_copy_creates_the_copy_without_handing_over(tmp_path: Path) -> None
     assert run.returncode == 0, run.output
     assert run.headers() == ["copy"]
     assert sandbox.handover_args() is None
-    assert "did not start alan" in run.stdout
+    assert "did not start alan-factory" in run.stdout
     assert _copy_dest(sandbox).is_dir()
 
 
