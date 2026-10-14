@@ -1,4 +1,11 @@
-import type { ChatInFlightTurn, ChatMessage, ParsedSseEvent, RepoProvisionStatus, RunSummary } from "../../../api";
+import type {
+  ChatInFlightTurn,
+  ChatMessage,
+  ParsedSseEvent,
+  PrepChatRead,
+  RepoProvisionStatus,
+  RunSummary,
+} from "../../../api";
 import { parseToolActivityLabel } from "./chatSseUtils";
 
 export interface ToolActivity {
@@ -61,6 +68,7 @@ export type ChatAction<B> =
   | { type: "flush_retry_started" }
   | { type: "flush_failed"; error: string }
   | { type: "flush_succeeded" }
+  | { type: "prep_chat_reads_received"; ts: string; reads: PrepChatRead[] }
   | { type: "assistant_done"; content: string; ts: string }
   | { type: "turn_stopped"; content: string; ts: string }
   | { type: "sse_error"; detail: string }
@@ -192,6 +200,23 @@ function handleFlushSucceeded(state: State): State {
   return { ...state, flush: null };
 }
 
+function handlePrepChatReadsReceived(
+  state: State,
+  action: Extract<Action, { type: "prep_chat_reads_received" }>,
+): State {
+  if (action.reads.length === 0) return state;
+  const target = state.messages
+    .flatMap((m, idx) => (m.role === "user" && m.ts === action.ts ? [idx] : []))
+    .at(-1);
+  if (target === undefined) return state;
+  return {
+    ...state,
+    messages: state.messages.map((m, idx) =>
+      idx === target ? { ...m, prep_chat_reads: action.reads } : m,
+    ),
+  };
+}
+
 function handleAssistantDone(state: State, action: Extract<Action, { type: "assistant_done" }>): State {
   return {
     ...state,
@@ -267,6 +292,7 @@ const HANDLERS: HandlerMap = {
   flush_retry_started: handleFlushRetryStarted,
   flush_failed: handleFlushFailed,
   flush_succeeded: handleFlushSucceeded,
+  prep_chat_reads_received: handlePrepChatReadsReceived,
   assistant_done: handleAssistantDone,
   turn_stopped: handleTurnStopped,
   sse_error: handleSseError,

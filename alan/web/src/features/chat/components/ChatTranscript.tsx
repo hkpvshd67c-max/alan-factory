@@ -1,6 +1,6 @@
 import { Fragment, type RefObject } from "react";
 
-import type { ChatMessage } from "../../../api";
+import type { ChatMessage, PrepChatRead } from "../../../api";
 import type { ToolActivity } from "../hooks/useChatSessionGeneric";
 import ActivityLine, { type ActivityLineVariant } from "./ActivityLine";
 import MarkdownBody from "../../../components/MarkdownBody";
@@ -47,6 +47,28 @@ function ChatMessageBubble({ message }: Readonly<{ message: ChatMessage }>) {
           Stopped
         </span>
       )}
+    </div>
+  );
+}
+
+function prepChatReadLine(read: PrepChatRead): string {
+  if (read.status === "other_repository") return "Not read: another repository";
+  if (read.status === "not_found") return "Not read: not found";
+  return read.title ? `Read preparation chat: ${read.title}` : "Read preparation chat";
+}
+
+function PrepChatReads({ reads }: Readonly<{ reads: readonly PrepChatRead[] | undefined }>) {
+  if (reads === undefined || reads.length === 0) return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="prep-chat-reads"
+      className="-mt-2 mb-3 ml-auto max-w-[min(80%,65ch)] px-2 text-xs text-text-muted"
+    >
+      {reads.map((read, idx) => (
+        <p key={`${read.status}-${String(idx)}`}>{prepChatReadLine(read)}</p>
+      ))}
     </div>
   );
 }
@@ -105,6 +127,7 @@ export default function ChatTranscript({
       {messages.map((m, idx) => (
         <Fragment key={`${m.role}-${String(idx)}-${m.ts}`}>
           <ChatMessageBubble message={m} />
+          {m.role === "user" && <PrepChatReads reads={m.prep_chat_reads} />}
           {m.role === "assistant" && (m.operations?.length ?? 0) > 0 && (
             <ActivityLine entries={m.operations!} thinking={false} variant={activityVariant} />
           )}
