@@ -10,6 +10,7 @@ import {
 
 import {
   ArchivedSessionRedirect,
+  type ChatAck,
   type ChatEventHandlers,
   type ChatMessage,
   type ParsedSseEvent,
@@ -41,7 +42,7 @@ export interface ChatSessionApi<B> {
   family: string;
   get: (sessionId: string) => Promise<ChatSessionShape<B>>;
   subscribe: (sessionId: string, handlers: ChatEventHandlers) => () => void;
-  send: (sessionId: string, content: string) => Promise<unknown>;
+  send: (sessionId: string, content: string) => Promise<ChatAck>;
   interrupt: (sessionId: string) => Promise<void>;
   summarize?: ((sessionId: string) => Promise<B>) | undefined;
   putBrief?: ((sessionId: string, content: string) => Promise<B>) | undefined;
@@ -117,11 +118,18 @@ function isRetryable409(err: unknown, attempt: number): boolean {
   return attempt < FLUSH_RETRY_DELAYS_MS.length && isErrorWithMessagePrefix(err, "409:");
 }
 
-function sendFlushed<B>(env: LoadEnv<B>, id: number, content: string, attempt: number): void {
+function sendFlushed<B>(
+  env: LoadEnv<B>,
+  id: number,
+  content: string,
+  attempt: number,
+  ts: string,
+): void {
   env.binding.send(env.sid, content).then(
-    () => {
+    (ack) => {
       if (env.ctx.cancelled || env.stateRef.current.flush?.id !== id) return;
       env.apply({ type: "flush_succeeded" });
+      env.apply({ type: "prep_chat_reads_received", ts, reads: ack.prep_chat_reads ?? [] });
     },
     (err: unknown) => {
       if (env.ctx.cancelled || env.stateRef.current.flush?.id !== id) return;
@@ -134,7 +142,7 @@ function sendFlushed<B>(env: LoadEnv<B>, id: number, content: string, attempt: n
         setTimeout(() => {
           if (env.ctx.cancelled || env.stateRef.current.flush?.id !== id) return;
           env.apply({ type: "flush_retry_started" });
-          sendFlushed(env, id, content, attempt + 1);
+          sendFlushed(env, id, content, attempt + 1, ts);
         }, FLUSH_RETRY_DELAYS_MS[attempt]),
       );
     },
@@ -142,8 +150,9 @@ function sendFlushed<B>(env: LoadEnv<B>, id: number, content: string, attempt: n
 }
 
 function beginFlush<B>(env: LoadEnv<B>, content: string): void {
-  const next = env.apply({ type: "flush_started", content, ts: new Date().toISOString() });
-  sendFlushed(env, next.flush!.id, content, 0);
+  const ts = new Date().toISOString();
+  const next = env.apply({ type: "flush_started", content, ts });
+  sendFlushed(env, next.flush!.id, content, 0, ts);
 }
 
 function maybeFlush<B>(env: LoadEnv<B>): void {
@@ -229,9 +238,11 @@ export function useChatSessionGeneric<B>(
         apply({ type: "message_queued", content });
         return;
       }
-      apply({ type: "send_started", content, ts: new Date().toISOString() });
+      const ts = new Date().toISOString();
+      apply({ type: "send_started", content, ts });
       try {
-        await binding.send(sessionId, content);
+        const ack = await binding.send(sessionId, content);
+        apply({ type: "prep_chat_reads_received", ts, reads: ack.prep_chat_reads ?? [] });
       } catch (err: unknown) {
         apply({ type: "send_failed", error: errorMessageOf(err) });
         throw err;

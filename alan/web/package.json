@@ -115,6 +115,7 @@
     "test:operator-scope-pickers": "vitest run src/features/operator/components/ScopePickerDialog.test.tsx src/features/operator/components/TargetSelect.test.tsx src/features/operator/hooks/useOperatorTargets.test.ts",
     "test:agent-catalogue": "vitest run src/lib/agentSearch.test.ts src/features/engine/hooks/useAgentCatalogue.test.ts src/components/AgentPromptViewer.test.tsx src/features/engine/components/AgentCatalogueTile.test.tsx src/features/engine/components/AgentFlagList.test.tsx src/features/engine/components/AgentRow.test.tsx src/features/engine/components/AgentSearchBar.test.tsx src/features/engine/pages/RepoAgents.test.tsx src/features/engine/pages/RepoAgents.url.test.tsx",
     "test:node-run-setup": "vitest run src/features/workspace/components/NodeDetailModal.test.tsx src/components/LaunchSetupList.test.tsx",
+    "test:prep-chat-reads": "vitest run src/features/chat/components/ChatTranscript.prepChatReads.test.tsx src/features/chat/hooks/chatSessionReducer.prepChatReads.test.ts src/features/chat/hooks/useChatSessionGeneric.prepChatReads.test.ts",
     "lint:knip": "knip",
     "lint:deps": "depcruise src --config .dependency-cruiser.cjs",
     "lint:dup": "jscpd src --config .jscpd.json",

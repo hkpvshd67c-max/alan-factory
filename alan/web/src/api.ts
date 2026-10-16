@@ -708,6 +708,8 @@ function subscribeEvents(handlers: ServerEventsHandlers): () => void {
 }
 
 export type ChatMessage = components["schemas"]["ChatMessageOut"];
+export type ChatAck = components["schemas"]["ChatAck"];
+export type PrepChatRead = components["schemas"]["PrepChatRead"];
 
 export type ChatSseEventKind = "assistant_done" | "error" | "chat_event" | "turn_stopped";
 
